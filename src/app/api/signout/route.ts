@@ -11,7 +11,7 @@ export async function POST(req: Request) {
         });
 
         // Clear the authentication cookie
-        response.headers.set("Set-Cookie", "user=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0");
+        response.headers.set("Set-Cookie", "token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0");
 
         return response;
     } catch (error: any) {

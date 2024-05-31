@@ -24,7 +24,8 @@ export async function POST(req: Request) {
 
   try {
     const decodedToken = await getAuth().verifyIdToken(body.token);
-    return new Response(JSON.stringify(decodedToken), {
+    const uid = decodedToken.uid;
+    return new Response(JSON.stringify({ uid }), {
       headers: { 
         "Content-Type": "application/json",
       },

@@ -1,26 +1,21 @@
 "use client";
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { auth } from '@/firebase/firebase';
 
 const Dashboard = () => {
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    const response = await fetch('/api/signout', {
-      method: 'POST',
+  const handleSignOut = () => {
+    auth.signOut().then(() => {
+      console.log('User signed out');
+    }).catch((error) => {
+      console.error('Error signing out: ', error);
     });
-
-    if (response.ok) {
-      // Redirect to the home page after successful signout
-      router.push('/');
-    } else {
-      console.error('Error signing out');
-    }
   };
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
       <h1>Dashboard</h1>
+      <p>Welcome!</p>
       <button 
         onClick={handleSignOut} 
         style={{ padding: '10px', backgroundColor: '#0070f3', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
