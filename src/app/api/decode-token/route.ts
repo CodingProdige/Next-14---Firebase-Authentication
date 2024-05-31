@@ -1,38 +1,41 @@
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-export async function POST(req: Request) {
-  // Parse the request body as JSON
+export async function POST(req: NextRequest) {
   const body = await req.json();
 
   if (!body.token) {
-    return new Response(JSON.stringify({ error: 'Token is required' }), {
+    return new NextResponse(JSON.stringify({ error: 'Token is required' }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
   }
 
   try {
-    const decodedToken = await getAuth().verifyIdToken(body.token);
-    const uid = decodedToken.uid;
-    return new Response(JSON.stringify({ uid }), {
+    const decodedToken = jwt.decode(body.token) as JwtPayload | null;
+
+    if (!decodedToken) {
+      throw new Error('Token decoding failed');
+    }
+
+    const uid = decodedToken.user_id || decodedToken.uid;
+
+    if (!uid) {
+      return new NextResponse(JSON.stringify({ error: 'UID not found in token' }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return new NextResponse(JSON.stringify({ uid }), {
       headers: { 
         "Content-Type": "application/json",
       },
     });
   } catch (error: any) {
-    console.error('Error verifying token:', error.message, error.stack);
-    return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
+    console.error('Error decoding token:', error.message, error.stack);
+    return new NextResponse(JSON.stringify({ error: 'Invalid token' }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
     });
