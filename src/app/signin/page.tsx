@@ -1,24 +1,35 @@
 "use client";
 import { useState } from 'react';
 import { FormEvent } from 'react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/firebase/firebase';
 
-async function handleSignIn(email: string, password: string) {
+async function handleSignIn(email: string, password: any) {
   try {
-    const response = await fetch('/api/signin', {
+    // Sign in with Firebase
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Call the generate-token API with the UID to get a custom token
+    const response = await fetch('/api/generate-token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ uid: user.uid })
     });
 
     if (response.ok) {
-      const user = await response.json();
+      const { customToken } = await response.json();
+
+      // Save the custom token as a cookie
+      document.cookie = `token=${customToken}; Path=/;`;
+
       // Redirect to the dashboard
       window.location.href = '/dashboard';
     } else {
       const error = await response.json();
-      console.error('Error signing in:', error.error);
+      console.error('Error generating token:', error.error);
       // Handle error (e.g., show error message to user)
     }
   } catch (error) {

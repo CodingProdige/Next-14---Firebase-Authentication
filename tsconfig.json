@@ -21,6 +21,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/auth.js", "src/app/api/signin/route.js", "src/components/sign-in.js", "src/context/UserContext.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/auth.js", "src/app/api/signin/route.js", "src/components/sign-in.js", "src/context/UserContext.js", "src/app/api/verify-token/route.ts", "src/app/api/compare-token/route.js", "src/app/signin/page.jsx", "src/app/api/generate-token/route.ts"],
   "exclude": ["node_modules"]
 }

@@ -1,67 +1,69 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import jwt, { JwtPayload } from 'jsonwebtoken';
+import admin from '@/firebase/firebaseAdmin';
 import { serialize } from 'cookie';
+import jwt from 'jsonwebtoken';
 
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-
-  const userToken = body.userToken;
-  const tokenCookie = body.tokenCookie;
-
-  if (!userToken) {
-    return new NextResponse(JSON.stringify({ error: 'User token is required' }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+export async function POST(req: Request) {
+  if (req.method !== 'POST') {
+    return new Response("Method not allowed", { status: 405 });
   }
 
-  if (!tokenCookie) {
-    return new NextResponse(JSON.stringify({ error: 'Token cookie is required' }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+  const { token } = await req.json();
+
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'Token is required' }), { status: 400 });
   }
 
-  if (userToken !== tokenCookie) {
-    return new NextResponse(JSON.stringify({ error: 'Tokens do not match' }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
+  try {
+    // Verify the custom token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as jwt.JwtPayload;
+
+    // Retrieve the token from the user's document
+    const userRef = admin.firestore().collection('users').doc(decoded.uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists || userDoc.data()?.customToken !== token) {
+      throw new Error('Invalid token');
+    }
+
+    // Check if the token is expired
+    const currentTime = Math.floor(Date.now() / 1000);
+    if ((decoded.exp ?? 0) < currentTime) {
+      // Token is expired, remove the cookie
+      const cookie = serialize('token', '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: -1,
+        path: '/',
+      });
+
+      const headers = new Headers();
+      headers.append('Set-Cookie', cookie);
+
+      return new Response(JSON.stringify({ valid: false }), {
+        status: 200,
+        headers: headers,
+      });
+    }
+
+    // Token is valid
+    return new Response(JSON.stringify({ valid: true }), { status: 200 });
+  } catch (error) {
+    console.error('Error verifying token:', error);
+
+    // If token verification fails, assume it's invalid and remove the cookie
+    const cookie = serialize('token', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: -1,
+      path: '/',
+    });
+
+    const headers = new Headers();
+    headers.append('Set-Cookie', cookie);
+
+    return new Response(JSON.stringify({ valid: false }), {
+      status: 200,
+      headers: headers,
     });
   }
-
-  // Decode the token to check expiration (assuming it's a JWT)
-  const tokenParts = tokenCookie.split('.');
-  if (tokenParts.length !== 3) {
-    return new NextResponse(JSON.stringify({ error: 'Invalid token format' }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  const payload = JSON.parse(atob(tokenParts[1]));
-  const now = Math.floor(Date.now() / 1000);
-
-  if (payload.exp < now) {
-    // Token is expired, sign the user out and delete the token cookie
-    return new NextResponse(JSON.stringify({ error: 'Token is expired' }), {
-      status: 401,
-      headers: {
-        "Content-Type": "application/json",
-        "Set-Cookie": serialize('token', '', {
-          maxAge: -1,
-          path: '/',
-          httpOnly: true,
-          secure: true,
-        }),
-      },
-    });
-  }
-
-  // If the token is valid and not expired, return a 200 status
-  return new NextResponse(JSON.stringify({ success: true }), {
-    headers: { 
-      "Content-Type": "application/json",
-    },
-  });
 }
