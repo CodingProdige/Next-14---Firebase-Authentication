@@ -9,9 +9,9 @@ export async function middleware(req: NextRequest) {
 
   const url = req.nextUrl.clone();
 
-  // Redirect to /signin if no token is found and the path is not /signin
+  // Redirect to /signin if no token is found and the path is not /signin or /signup
   if (!token) {
-    if (url.pathname !== '/signin') {
+    if (url.pathname !== '/signin' && url.pathname !== '/signup') {
       console.log('No token found, redirecting to /signin');
       return NextResponse.redirect(new URL('/signin', req.url));
     }
@@ -40,21 +40,21 @@ export async function middleware(req: NextRequest) {
 
     // Check if the user is authenticated based on the verification result
     if (verificationResult.valid) {
-      if (url.pathname === '/signin') {
+      if (url.pathname === '/signin' || url.pathname === '/signup') {
         console.log('User is authenticated, redirecting to /dashboard');
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
       return NextResponse.next();
     }
 
-    // Redirect to /signin if not authenticated and path is not /signin
-    if (url.pathname !== '/signin') {
+    // Redirect to /signin if not authenticated and path is not /signin or /signup
+    if (url.pathname !== '/signin' && url.pathname !== '/signup') {
       return NextResponse.redirect(new URL('/signin', req.url));
     }
   } catch (error) {
     console.error('Authentication error:', error);
-    // Redirect to /signin in case of an error and path is not /signin
-    if (url.pathname !== '/signin') {
+    // Redirect to /signin in case of an error and path is not /signin or /signup
+    if (url.pathname !== '/signin' && url.pathname !== '/signup') {
       return NextResponse.redirect(new URL('/signin', req.url));
     }
   }
@@ -63,5 +63,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/signin'],
+  matcher: ['/dashboard/:path*', '/signin', '/signup'],
 };
